@@ -5,6 +5,7 @@ const User = require("../models/User.js");
 const jwt = require("jsonwebtoken");
 const { authenticateToken } = require("../middlewares/auth.js");
 require("dotenv").config();
+const { getCachedData, setCachedData } = require("../services/redisService.js");
 
 // POST /scores request for score subbmitions
 router.post("/createScore", authenticateToken, async (req, res) => {
@@ -36,22 +37,38 @@ router.post("/createScore", authenticateToken, async (req, res) => {
 // GET  Retrieve and sort all scores
 router.get("/leaderboard", authenticateToken, async (req, res) => {
   try {
-    // sorting the data while fetching
-    const scores = await Score.find().sort({ score: -1 });
+    const { userId } = req.body; // Expecting userId in the request body
 
-    // Formating the response to include rank
-    const leaderboard = scores.map((entry, index) => ({
+    // Check if the user exists
+    const userExists = await User.findOne({ userId });
+    if (!userExists) {
+      return res.status(404).send({ error: "User not found" });
+    }
+    const cacheKey = "leaderboard";
+
+    // Check if data is cached in Redis
+    const cachedLeaderboard = await getCachedData(cacheKey);
+    if (cachedLeaderboard) {
+      return res.status(200).json(cachedLeaderboard);
+    }
+
+    // If not cached, fetch from MongoDB
+    const leaderboard = await Score.find().sort({ score: -1 }).lean();
+    const formattedLeaderboard = leaderboard.map((entry, index) => ({
       rank: index + 1,
       userId: entry.userId,
       score: entry.score,
     }));
 
-    res.status(200).json(leaderboard);
+    // Cache the result in Redis
+    await setCachedData(cacheKey, formattedLeaderboard);
+
+    // Return leaderboard from MongoDB
+    res.status(200).json(formattedLeaderboard);
   } catch (err) {
-    res.status(500).send({
-      error: "An error occurred while retrieving the leaderboard",
-      details: err.message,
-    });
+    res
+      .status(500)
+      .send({ error: "An error occurred while retrieving the leaderboard" });
   }
 });
 

@@ -28,3 +28,18 @@
   --generate jwt
   -- add mongo entry for user
   -- user schema generation - []
+
+  --
+
+  # api scalability
+
+  -- addition of rate limiter
+  --redis cache impl
+  --connection on local docker
+  --setting data entry part
+  --setting data expiration
+  --bullMQ impl
+  --connection creation
+  --cluster
+  --setup
+  --creating instance as per the availability of cores.
