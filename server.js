@@ -2,10 +2,17 @@ const express = require("express");
 const cors = require("cors");
 const userRoutes = require("./routes/userRoutes.js");
 const scoreRoutes = require("./routes/scoreRoutes.js");
-const authenticateToken = require("./middlewares/auth.js");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 const mongoose = require("mongoose");
 const app = express();
+
+const limiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 2,
+  message: "Too many requests from this IP, please try again after a minute",
+});
+app.use(limiter);
 
 mongoose
   .connect(process.env.MONGO_URI, {
