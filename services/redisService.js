@@ -22,7 +22,7 @@ const getCachedData = async (key) => {
 // Function to set data to Redis with expiration time
 const setCachedData = async (key, value, expiration = 60) => {
   try {
-    await client.set(key, JSON.stringify(value), "EX", expiration); // Expiration time in seconds
+    await client.set(key, JSON.stringify(value), { EX: expiration }); // Expiration time in seconds
   } catch (err) {
     console.error("Error setting data to Redis", err);
   }

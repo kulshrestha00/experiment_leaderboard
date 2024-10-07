@@ -7,6 +7,47 @@ const { authenticateToken } = require("../middlewares/auth.js");
 require("dotenv").config();
 const { getCachedData, setCachedData } = require("../services/redisService.js");
 
+// adding bulk users
+router.post("/bulkCreateScores", authenticateToken, async (req, res) => {
+  const users = req.body; //should be array of object/json
+
+  //if not array return error with msg
+  if (
+    !Array.isArray(users) ||
+    users.some((user) => !user.userId || typeof user.score !== "number")
+  ) {
+    return res.status(400).send({
+      error:
+        "Invalid request format. Each object must have a valid userId and score.",
+    });
+  }
+
+  try {
+    //manupulating data for updating field
+    const bulkOperations = users.map((user) => ({
+      updateOne: {
+        filter: { userId: user.userId },
+        update: { score: user.score },
+        upsert: true, // if not available it will add one
+      },
+    }));
+
+    const bulkResult = await Score.bulkWrite(bulkOperations);
+
+    //sending the completation msg back how many entris updated and added
+    res.status(201).send({
+      message: "Scores created/updated successfully",
+      scoreUpdates: bulkResult.nModified,
+      scoreInserts: bulkResult.upsertedCount,
+    });
+  } catch (err) {
+    res.status(500).send({
+      error: "An error occurred during bulk score creation",
+      details: err.message,
+    });
+  }
+});
+
 // POST /scores request for score subbmitions
 router.post("/createScore", authenticateToken, async (req, res) => {
   const { userId, score } = req.body;
